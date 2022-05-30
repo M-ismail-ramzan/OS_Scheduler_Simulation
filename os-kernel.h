@@ -1,6 +1,4 @@
-// A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
-using namespace std;
 struct PCB
 {
     // making the varibles for PCB
@@ -72,31 +70,36 @@ struct PCB
     // Display all the PCB values
     void display_pcb_values()
     {
-        cout << "\n" << "name:"
-             << this->process_name << "\n";
-        cout << "\n" << "prot:"
-             << this->priority << "\n";
         cout << "\n"
-             << this->arrival_time << "\n";
+             << this->process_name;
         cout << "\n"
-             << this->process_type << "\n";
+             << this->priority ;
         cout << "\n"
-             << this->cpu_time << "\n";
+             << this->arrival_time ;
         cout << "\n"
-             << this->input_output_time << "\n";
+             << this->process_type ;
+        cout << "\n"
+             << this->cpu_time ;
+        cout << "\n"
+             << this->input_output_time ;
     }
 };
 
 class Kernel
 {
     // a pointer that can access the PCB anytime
-    PCB pcb_entry;
+    PCB *pcb_arr;
+    int count_pcb_entry;
 
 public:
-    void input_file_reader(string file_name);
+Kernel(){
+    pcb_arr = nullptr;
+    count_pcb_entry=0;
+}
+    void Implement_start(string file_name);
 };
 
-void Kernel::input_file_reader(string file_name)
+void Kernel::Implement_start(string file_name)
 {
     cout << "\n Reading the File of the Processes \n";
     // Now I need to open that file and read all the information
@@ -114,17 +117,25 @@ void Kernel::input_file_reader(string file_name)
         while (getline(newfile, tp))
         {
             // i Represent the Number of Process in the txt file
-            if (i == 1)
+          //  if (i == 1)
             {
                 // here we need to send the data to the structure
                 cout << tp << "\n";
-                pcb_entry.assign_values_to_pcb_variable(tp);
+                //creaing a pcb for each process
+                count_pcb_entry++;
+                pcb_arr = new PCB; 
+                pcb_arr[count_pcb_entry].assign_values_to_pcb_variable(tp);
             }
             i++;
         }
         newfile.close(); // close the file object.
 
         // reading the PCB values for testing.
-        pcb_entry.display_pcb_values();
+        for (int i = 0; i < count_pcb_entry; i++)
+        {
+           pcb_arr[i].display_pcb_values();
+        }
+        
+        
     }
 }
