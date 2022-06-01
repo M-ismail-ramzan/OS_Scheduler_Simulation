@@ -21,6 +21,10 @@ const short NO_OF_PROCESSES = 8;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
+struct PCB;
+list<PCB> qlist;
+
+
 struct PCB
 {
     // making the varibles for PCB
@@ -43,7 +47,7 @@ struct PCB
     }
 
     // A function to assign the values of the file to the PCB
-    void assign_values_to_pcb_variable(string process_info)
+    void assign_values_to_pcb_variable(string process_info,PCB &wow)
     {
         // Now time to break the string
         // Used for breaking words
@@ -95,6 +99,10 @@ struct PCB
                 index++;
             }
         }
+       
+        qlist.push_back(wow);
+         cout << "\n===========" <<qlist.back().process_name << "\n";
+        
     }
     double get_arravil_time()
     {
@@ -117,24 +125,26 @@ struct PCB
              << this->input_output_time;
     }
 };
+// list for reading from the file
 
 class Kernel
 {
     // a pointer that can access the PCB anytime
-    PCB *pcb_arr;
+    PCB pcb_arr;
     int count_pcb_entry;
     // create the array of the threads id's
     queue<PCB> queue_new;
 public:
     Kernel()
     {
-        pcb_arr = new PCB[NO_OF_PROCESSES];
+        //pcb_arr = new PCB[NO_OF_PROCESSES];
         count_pcb_entry = 0;
     }
     void Implement_start(string file_name);
     void controller_thread(int cpu_cores);
     void start_scheduler_with_threads(int cpu_cores);
     void fill_the_scheduler_queue(int cpu_cores);
+    void showlist(list<PCB> g);
     static void *helper_fill_the_scheduler_queue(void *p);
 };
 void Kernel::controller_thread(int cpu_cores)
@@ -143,10 +153,10 @@ void Kernel::controller_thread(int cpu_cores)
     for (int i = 0; i < NO_OF_PROCESSES; i++)
     {
         // now data is pushed into the queue
-        queue_new.push(pcb_arr[i]);
+       // queue_new.push(pcb_arr[i]);
     }
     
-    
+    showlist(qlist);
 }
 
 
@@ -207,6 +217,20 @@ void Kernel::fill_the_scheduler_queue(int cpu_cores)
     // return NULL;
 }
 
+// function for printing the elements in a list
+void Kernel::showlist(list<PCB> g)
+{
+    PCB test;
+    list<PCB>::iterator it;
+     for (it = g.begin(); it != g.end(); ++it){
+         test = *it;
+         cout << test.process_name <<  "\n";
+         
+     }
+        cout <<"\t";
+        cout << "\n";
+}
+  
 void Kernel::Implement_start(string file_name)
 {
     cout << "\n Reading the File of the Processes \n";
@@ -228,10 +252,11 @@ void Kernel::Implement_start(string file_name)
             if (i != 0)
             {
                 // here we need to send the data to the structure
-                cout << tp << "\n";
+               // cout << tp << "\n";
                 // creaing a pcb for each process
-                cout << "\n Counting " << count_pcb_entry;
-                pcb_arr[count_pcb_entry].assign_values_to_pcb_variable(tp);
+                //cout << "\n Counting " << count_pcb_entry << "\n";
+                
+                pcb_arr.assign_values_to_pcb_variable(tp,pcb_arr);
                 count_pcb_entry++;
             }
             i++;
@@ -239,10 +264,11 @@ void Kernel::Implement_start(string file_name)
         newfile.close(); // close the file object.
         cout << "\n File has been Read Successfully\n";
         // reading the PCB values for testing.
-        for (int i = 0; i < count_pcb_entry; i++)
+      /*  for (int i = 0; i < count_pcb_entry; i++)
         {
             pcb_arr[i].display_pcb_values();
-        }
+        }*/
+        showlist(qlist);
     }
 }
 
@@ -265,7 +291,7 @@ int main(int argc, char *argv[])
         {
             // taking the Arguments
             if (i != 0)
-                cout << argv[i] << "\n";
+               // cout << argv[i] << "\n";
 
             // First Argument
             if (i == 1)
