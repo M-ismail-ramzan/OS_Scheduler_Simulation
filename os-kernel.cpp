@@ -9,15 +9,18 @@
 #include <iomanip>
 #include <time.h>
 #include <fstream>
+#include <queue>
 #include <math.h>
 #include <queue>
 #include <sstream>
 #include <mutex>
+#include <list>
 //#include "os-kernel.h"
 using namespace std;
+const short NO_OF_PROCESSES = 8;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
- pthread_mutex_t mutex_locked_thread;
+pthread_mutex_t mutex_locked_thread;
 struct PCB
 {
     // making the varibles for PCB
@@ -93,6 +96,10 @@ struct PCB
             }
         }
     }
+    double get_arravil_time()
+    {
+        return arrival_time;
+    }
     // Display all the PCB values
     void display_pcb_values()
     {
@@ -117,19 +124,31 @@ class Kernel
     PCB *pcb_arr;
     int count_pcb_entry;
     // create the array of the threads id's
-    
-
+    queue<PCB> queue_new;
 public:
     Kernel()
     {
-        pcb_arr = new PCB[8];
+        pcb_arr = new PCB[NO_OF_PROCESSES];
         count_pcb_entry = 0;
     }
     void Implement_start(string file_name);
+    void controller_thread(int cpu_cores);
     void start_scheduler_with_threads(int cpu_cores);
-    void fill_the_scheduler_queue();
+    void fill_the_scheduler_queue(int cpu_cores);
     static void *helper_fill_the_scheduler_queue(void *p);
 };
+void Kernel::controller_thread(int cpu_cores)
+{
+    // Now we are the controller thread
+    for (int i = 0; i < NO_OF_PROCESSES; i++)
+    {
+        // now data is pushed into the queue
+        queue_new.push(pcb_arr[i]);
+    }
+    
+    
+}
+
 
 void Kernel::start_scheduler_with_threads(int cpu_cores)
 {
@@ -139,8 +158,9 @@ void Kernel::start_scheduler_with_threads(int cpu_cores)
     // create the corese as specified by the user
     for (int i = 0; i < cpu_cores; i++)
     {
+        void *ptr = &cpu_cores;
         // creating the threads accoording to given time
-        if (pthread_create(&threads_id[i], NULL, Kernel::helper_fill_the_scheduler_queue, NULL) != 0)
+        if (pthread_create(&threads_id[i], NULL, Kernel::helper_fill_the_scheduler_queue, ptr) != 0)
         {
             perror("\n Kernel Threads are unable to create");
             exit(0);
@@ -159,16 +179,24 @@ void Kernel::start_scheduler_with_threads(int cpu_cores)
 }
 void *Kernel::helper_fill_the_scheduler_queue(void *p)
 {
-    Kernel *a = (Kernel *)p;       
-    a->fill_the_scheduler_queue(); 
-    return NULL;                  
+    Kernel *a ;//= (Kernel *)p;
+    int *x = (int *)p;
+    a->fill_the_scheduler_queue(*x);
+    return NULL;
 }
-void Kernel::fill_the_scheduler_queue()
+void Kernel::fill_the_scheduler_queue(int cpu_cores)
 {
     sleep(1);
     // locked so one thread can write to the Queue at a time
     pthread_mutex_lock(&mutex_locked_thread);
     cout << " \nThread is Running : " << pthread_self() << "\n";
+   // priority_queue<PCB> queue_new;
+    // Now we have to push into the queue using the arriaval time
+
+    for (int i = 0; i < NO_OF_PROCESSES; i++)
+    {
+       // queue_new.push(pcb_arr[i]);
+    }
     // here we have to implement the Queue where the information will be transmitted
     sleep(1);
     pthread_mutex_unlock(&mutex_locked_thread);
