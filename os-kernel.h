@@ -1,13 +1,12 @@
-//#include "os-kernel.cpp"
 struct PCB
 {
     // making the varibles for PCB
     string process_name;
-    int priority;
-    int arrival_time;
+    double priority;
+    double arrival_time;
     string process_type;
-    int cpu_time;
-    int input_output_time;
+    double cpu_time;
+    double input_output_time;
 
     PCB()
     {
@@ -34,33 +33,40 @@ struct PCB
             {
                 if (index == 0)
                 {
+                    cout << "\ntest " << index << "\n";
                     // first col
                     this->process_name = (process_info);
                 }
                 else if (index == 1)
                 {
+                     cout << "\ntest " << index << "\n";
                     // second col
-                    this->priority = stoi(process_info);
+                    this->priority = stod(process_info);
                 }
                 else if (index == 2)
                 {
+                     cout << "\ntest " << index << "\n";
                     // third col
-                    this->arrival_time = stoi(process_info);
+                    this->arrival_time = stod(process_info);
                 }
                 else if (index == 3)
                 {
+                     cout << "\ntest " << index << "\n";
                     this->process_type = process_info;
                 }
                 else if (index == 4)
                 {
-                    this->cpu_time = stoi(process_info);
+                     cout << "\ntest " << index << "\n";
+                    this->cpu_time = stod(process_info);
                 }
                 else if (index == 5)
                 {
-                    this->input_output_time = stoi(process_info);
+                     cout << "\ntest " << index << "\n";
+                    this->input_output_time = stod(process_info);
                 }
                 else
                 {
+                     cout << "\ntest " << index << "\n";
                     // there will be no column but still i added this for no reason
                 }
                 index++;
@@ -93,7 +99,7 @@ class Kernel
 
 public:
 Kernel(){
-    pcb_arr = nullptr;
+    pcb_arr = new PCB[8];
     count_pcb_entry=0;
 }
     void Implement_start(string file_name);
@@ -117,19 +123,19 @@ void Kernel::Implement_start(string file_name)
         while (getline(newfile, tp))
         {
             // i Represent the Number of Process in the txt file
-          //  if (i == 1)
+            if (i != 0)
             {
                 // here we need to send the data to the structure
                 cout << tp << "\n";
                 //creaing a pcb for each process
+                cout << "\n Counting " << count_pcb_entry;
+               pcb_arr[count_pcb_entry].assign_values_to_pcb_variable(tp);
                 count_pcb_entry++;
-                pcb_arr = new PCB; 
-                pcb_arr[count_pcb_entry].assign_values_to_pcb_variable(tp);
             }
             i++;
         }
         newfile.close(); // close the file object.
-
+        cout << "\n Iusses\n";
         // reading the PCB values for testing.
         for (int i = 0; i < count_pcb_entry; i++)
         {
