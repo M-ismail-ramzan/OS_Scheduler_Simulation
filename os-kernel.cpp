@@ -145,7 +145,7 @@ class Scheduler
 
 public:
     // these functions are just to Run the Threads for CPU
-    void start_scheduler_with_threads(pthread_t*);
+    void start_scheduler_with_threads(pthread_t *);
     static void *helper_fill_the_scheduler_queue(void *p);
     void fill_the_scheduler_queue(int cpu_cores);
     void send_new_queue_to_Ready_queue();
@@ -171,7 +171,7 @@ void Scheduler::send_new_queue_to_Ready_queue()
 }
 void Scheduler::start_scheduler_with_threads(pthread_t *threads_id)
 {
-  
+
     // create the corese as specified by the user
     for (int i = 0; i < CPU_CORES; i++)
     {
@@ -194,20 +194,22 @@ void *Scheduler::helper_fill_the_scheduler_queue(void *p)
 }
 void Scheduler::fill_the_scheduler_queue(int cpu_cores)
 {
-    while(1){
-    pthread_mutex_lock(&mutex_locked_thread);
-    sleep(1);
-    // locked so one thread can write to the Queue at a time
-    
-    cout << "\nThread waiting: " << pthread_self() << "\n";
-    while (queue_ready.empty());
-    cout << " \nThread is Running : " << pthread_self() << "\n";
-    queue_ready.pop();
-    // priority_queue<PCB> queue_new;
-    // Now we have to push into the queue using the arriaval time
-    // here we have to implement the Queue where the information will be transmitted
-    pthread_mutex_unlock(&mutex_locked_thread);
-    // return NULL;
+    while (1)
+    {
+        pthread_mutex_lock(&mutex_locked_thread);
+        sleep(1);
+        // locked so one thread can write to the Queue at a time
+
+        cout << "\nThread waiting: " << pthread_self() << "\n";
+        while (queue_ready.empty())
+            ;
+        cout << " \nThread is Running : " << pthread_self() << "\n";
+        queue_ready.pop();
+        // priority_queue<PCB> queue_new;
+        // Now we have to push into the queue using the arriaval time
+        // here we have to implement the Queue where the information will be transmitted
+        pthread_mutex_unlock(&mutex_locked_thread);
+        // return NULL;
     }
 }
 //-------------------------------End Scheduler-----------------------//
@@ -218,8 +220,8 @@ class Kernel
     PCB pcb_arr;
     int count_pcb_entry;
     // create the array of the threads id's
-      // This is time to start the Threads...
-    
+    // This is time to start the Threads...
+
 public:
     Scheduler *kernel_scheduler;
     Kernel()
@@ -229,7 +231,7 @@ public:
         kernel_scheduler = new Scheduler;
     }
     void Implement_start(string file_name);
-    void controller_thread(int cpu_cores,pthread_t*);
+    void controller_thread(int cpu_cores, pthread_t *);
     void start_scheduler_with_threads(int cpu_cores);
     void showlist(list<PCB> g);
     void send_list_to_queue_new(list<PCB>);
@@ -263,7 +265,7 @@ void Kernel::controller_thread(int cpu_cores, pthread_t *threads_id)
     cout << "\n Controller Thread will Now Ask Scheduler (Short term) to Send the Processes to the Ready Queue According to their Arrival Time \n";
     ;
 
-       // We can either have 4,2,1 CPU's Remember THAT!
+    // We can either have 4,2,1 CPU's Remember THAT!
     kernel_scheduler->start_scheduler_with_threads(threads_id);
     kernel_scheduler->send_new_queue_to_Ready_queue();
 
@@ -312,7 +314,6 @@ void Kernel::send_list_to_queue_new(list<PCB> g)
 
 void Kernel::Implement_start(string file_name)
 {
- 
 
     cout << "\n Reading the File of the Processes \n";
     // Now I need to open that file and read all the information
@@ -357,34 +358,45 @@ int main(int argc, char *argv[])
     Kernel spark_kernal;
     cout << "\n Checking for Argumnets \n";
     // checking for the erros at the arguments
-    if (argc == 1)
+    if (argc < 5)
     {
         cout << "\n Please Use the Following Format \n";
         cout << "\nos-kernel <Input file> <# CPUs> r <timeslice> <Output file>\n";
+        cout << "\nos-kernel <Input file> <# CPUs> f <Output file>\n";
+        cout << "\nos-kernel <Input file> <# CPUs> p <Output file>\n";
     }
     else
     {
+        cout << argv[3];
+        // checking some argument..
+
+        if (!(*(argv[3]) == 'f' || *(argv[3]) == 'p' || *(argv[3]) == 'r'))
+        {
+            cout << "\n Invalid Aurgumnets \n";
+            exit(1);
+        }
         // reading the arguments
         for (int i = 0; i < argc; ++i)
         {
             // taking the Arguments
-            if (i != 0)
-                // cout << argv[i] << "\n";
 
-                // First Argument
-                if (i == 1)
-                {
-                    // First Argumnet is going to be input file
-                    spark_kernal.Implement_start(argv[i]);
-                }
+            // cout << argv[i] << "\n";
+
+            // First Argument
+            if (i == 1)
+            {
+                // First Argumnet is going to be input file
+                spark_kernal.Implement_start(argv[i]);
+            }
             // Second Argument
             if (i == 2)
             {
                 if (stoi(argv[i]) == 1 || stoi(argv[i]) == 2 || stoi(argv[i]) == 4)
                 {
+
                     CPU_CORES = stoi(argv[i]);
                     pthread_t threads_id[CPU_CORES];
-                    spark_kernal.controller_thread(stoi(argv[i]),threads_id);
+                    spark_kernal.controller_thread(stoi(argv[i]), threads_id);
 
                     // spark_kernal.start_scheduler_with_threads(stoi(argv[i]));
                 }
@@ -393,6 +405,10 @@ int main(int argc, char *argv[])
                     cout << "\n Invalid Aurgumnets \n";
                     exit(1);
                 }
+            }
+            // Second Argument
+            if (i == 3)
+            {
             }
         }
     }
