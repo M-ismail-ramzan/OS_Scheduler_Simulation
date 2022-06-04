@@ -180,15 +180,27 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
     // Here we have to Perform the FCFS
     cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
 
+    // Here i will be counting the Total Execution time
+
     if (pcb_obj.input_output_time > 0)
     {
         // send the process to the Waiting Queue ///
         TOTAL_CONTEXT_SWICTING++;
+        // adding 2 cuz
+        // -- CPU TIME + I/O time (Assume 1 sec)
+        //     So,    1 + 1 = 2
+        TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + 2;
+        // drcreasing the i/o by one because it' going for input
         pcb_obj.input_output_time--;
+        // just assuming it will go to i/o after 1 sec
         pcb_obj.cpu_time--;
         // send the Process to the waiting Queue
         // queue_waiting.push(pcb_obj);
         scheduler_ptr->send_running_queue_to_waiting_queue(pcb_obj);
+    }
+    else
+    {
+        TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
     }
 }
 
@@ -222,12 +234,12 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
     {
         if (!queue_waiting.empty())
         {
-            
+
             Scheduler *ptr;
             cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
+            queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
             sleep(1);
-            
         }
         else
         {
