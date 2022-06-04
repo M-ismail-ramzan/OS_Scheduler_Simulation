@@ -23,11 +23,13 @@ using namespace std;
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
 int CPU_CORES = 0;
+char ALGO = 'f';
 struct PCB;
 class Scheduler;
 list<PCB> qlist;
 queue<PCB> queue_new;
 queue<PCB> queue_ready;
+queue<PCB> queue_running;
 struct PCB
 {
     // making the varibles for PCB
@@ -139,11 +141,27 @@ struct PCB
 };
 //-------------------------------END PCB-----------------------//
 
+
+//------------------------------START OF PROCESSER------------------//
+class Processer{
+public:
+// A Process PCB values will be sent to the Algo and the Algo will then Execute 
+// the Process
+void Algo_First_come_First_server(PCB);
+};
+// Take Pcb object and Run the Process
+void Processer::Algo_First_come_First_server(PCB pcb_obj){
+
+    cout << "\n PROCESSER GOT \n";
+    cout << pcb_obj.process_name;
+}
+
 //-----------------------Scheduler--------------------------------//
 class Scheduler
 {
 
 public:
+    Processer *my_cpu;
     // these functions are just to Run the Threads for CPU
     void start_scheduler_with_threads(pthread_t *);
     static void *helper_fill_the_scheduler_queue(void *p);
@@ -199,12 +217,17 @@ void Scheduler::fill_the_scheduler_queue(int cpu_cores)
         pthread_mutex_lock(&mutex_locked_thread);
         sleep(1);
         // locked so one thread can write to the Queue at a time
-
         cout << "\nThread waiting: " << pthread_self() << "\n";
-        while (queue_ready.empty())
-            ;
+        while (queue_ready.empty());
         cout << " \nThread is Running : " << pthread_self() << "\n";
+        // get the PCB and give it to the Processer
+        PCB tmp_obj = queue_ready.front();
         queue_ready.pop();
+        if(ALGO == 'f'){
+            cout << "Running the FCFS";
+            my_cpu->Algo_First_come_First_server(tmp_obj);
+            
+        }   
         // priority_queue<PCB> queue_new;
         // Now we have to push into the queue using the arriaval time
         // here we have to implement the Queue where the information will be transmitted
@@ -374,6 +397,9 @@ int main(int argc, char *argv[])
         {
             cout << "\n Invalid Aurgumnets \n";
             exit(1);
+        }else{
+            // this is the Algo we are going to RUNnnn
+            ALGO = *(argv[3]);
         }
         // reading the arguments
         for (int i = 0; i < argc; ++i)
