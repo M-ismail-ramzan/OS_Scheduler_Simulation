@@ -1,8 +1,10 @@
 #include <iostream>
 #include <stdio.h>
+#include <algorithm>
 #include <unistd.h>
 #include <string.h>
 #include <sys/types.h>
+#include <stdlib.h>
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <pthread.h>
@@ -17,14 +19,14 @@
 #include <list>
 //#include "os-kernel.h"
 using namespace std;
-const short NO_OF_PROCESSES = 8;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
 struct PCB;
+class Scheduler;
 list<PCB> qlist;
-
-
+queue<PCB> queue_new;
+queue<PCB> queue_ready;
 struct PCB
 {
     // making the varibles for PCB
@@ -47,7 +49,7 @@ struct PCB
     }
 
     // A function to assign the values of the file to the PCB
-    void assign_values_to_pcb_variable(string process_info,PCB &wow)
+    void assign_values_to_pcb_variable(string process_info, PCB &wow)
     {
         // Now time to break the string
         // Used for breaking words
@@ -68,13 +70,17 @@ struct PCB
                 {
 
                     // second col
-                    this->priority = stod(process_info);
+                    string tmp = "";
+                    tmp = process_info;
+                    this->priority = stod(tmp.c_str());
                 }
                 else if (index == 2)
                 {
 
                     // third col
-                    this->arrival_time = stod(process_info);
+                    string tmp = "";
+                    tmp = process_info;
+                    this->arrival_time = stod(tmp);
                 }
                 else if (index == 3)
                 {
@@ -84,12 +90,16 @@ struct PCB
                 else if (index == 4)
                 {
 
-                    this->cpu_time = stod(process_info);
+                    string tmp = "";
+                    tmp = process_info;
+                    this->cpu_time = stod(tmp);
                 }
                 else if (index == 5)
                 {
 
-                    this->input_output_time = stod(process_info);
+                    string tmp = "";
+                    tmp = process_info;
+                    this->input_output_time = stod(tmp);
                 }
                 else
                 {
@@ -99,10 +109,11 @@ struct PCB
                 index++;
             }
         }
-       
+
+        // checking if i really get the data xd
         qlist.push_back(wow);
-         cout << "\n===========" <<qlist.back().process_name << "\n";
-        
+        cout << "\n===========" << qlist.back().process_name << "\t\t" << qlist.back().priority << "\t\t" << qlist.back().arrival_time << "\t\t" << qlist.back().process_type << "\t\t" << qlist.back().cpu_time << "\t\t" << qlist.back().input_output_time << "\t\t"
+             << "\n";
     }
     double get_arravil_time()
     {
@@ -125,42 +136,21 @@ struct PCB
              << this->input_output_time;
     }
 };
-// list for reading from the file
+//-------------------------------END PCB-----------------------//
 
-class Kernel
-{
-    // a pointer that can access the PCB anytime
-    PCB pcb_arr;
-    int count_pcb_entry;
-    // create the array of the threads id's
-    queue<PCB> queue_new;
-public:
-    Kernel()
-    {
-        //pcb_arr = new PCB[NO_OF_PROCESSES];
-        count_pcb_entry = 0;
-    }
-    void Implement_start(string file_name);
-    void controller_thread(int cpu_cores);
+//-----------------------Scheduler--------------------------------//
+class Scheduler{
+
+    public:
+    // these functions are just to Run the Threads for CPU
     void start_scheduler_with_threads(int cpu_cores);
-    void fill_the_scheduler_queue(int cpu_cores);
-    void showlist(list<PCB> g);
     static void *helper_fill_the_scheduler_queue(void *p);
-};
-void Kernel::controller_thread(int cpu_cores)
-{
-    // Now we are the controller thread
-    for (int i = 0; i < NO_OF_PROCESSES; i++)
-    {
-        // now data is pushed into the queue
-       // queue_new.push(pcb_arr[i]);
-    }
+    void fill_the_scheduler_queue(int cpu_cores);
+  
     
-    showlist(qlist);
-}
+};
 
-
-void Kernel::start_scheduler_with_threads(int cpu_cores)
+  void Scheduler::start_scheduler_with_threads(int cpu_cores)
 {
     // This is time to start the Threads...
 
@@ -170,7 +160,7 @@ void Kernel::start_scheduler_with_threads(int cpu_cores)
     {
         void *ptr = &cpu_cores;
         // creating the threads accoording to given time
-        if (pthread_create(&threads_id[i], NULL, Kernel::helper_fill_the_scheduler_queue, ptr) != 0)
+        if (pthread_create(&threads_id[i], NULL, Scheduler::helper_fill_the_scheduler_queue, ptr) != 0)
         {
             perror("\n Kernel Threads are unable to create");
             exit(0);
@@ -187,50 +177,113 @@ void Kernel::start_scheduler_with_threads(int cpu_cores)
         }
     }
 }
-void *Kernel::helper_fill_the_scheduler_queue(void *p)
+
+void *Scheduler::helper_fill_the_scheduler_queue(void *p)
 {
-    Kernel *a ;//= (Kernel *)p;
+    Scheduler *a; //= (Kernel *)p;
     int *x = (int *)p;
     a->fill_the_scheduler_queue(*x);
     return NULL;
 }
-void Kernel::fill_the_scheduler_queue(int cpu_cores)
+void Scheduler::fill_the_scheduler_queue(int cpu_cores)
 {
     sleep(1);
     // locked so one thread can write to the Queue at a time
     pthread_mutex_lock(&mutex_locked_thread);
     cout << " \nThread is Running : " << pthread_self() << "\n";
-   // priority_queue<PCB> queue_new;
+    // priority_queue<PCB> queue_new;
     // Now we have to push into the queue using the arriaval time
 
-    for (int i = 0; i < NO_OF_PROCESSES; i++)
-    {
-       // queue_new.push(pcb_arr[i]);
-    }
     // here we have to implement the Queue where the information will be transmitted
     sleep(1);
     pthread_mutex_unlock(&mutex_locked_thread);
-    // Now there will be multiple threads running at a time
-    // These threads will pass the information to the NEW Queue which will be then passed tp the scheduler
-    // We must add lock in here because this area is being written by multiple thread
 
     // return NULL;
 }
+//-------------------------------End Scheduler-----------------------//
+
+
+class Kernel
+{
+    // a pointer that can access the PCB anytime
+    PCB pcb_arr;
+    int count_pcb_entry;
+    // create the array of the threads id's
+  
+
+public:
+    Scheduler *kernel_scheduler;
+    Kernel()
+    {
+        // pcb_arr = new PCB[NO_OF_PROCESSES];
+        count_pcb_entry = 0;
+        kernel_scheduler=new Scheduler;
+    }
+    void Implement_start(string file_name);
+    void controller_thread(int cpu_cores);
+    void start_scheduler_with_threads(int cpu_cores);
+    void showlist(list<PCB> g);
+    void send_list_to_queue_new(list<PCB>);
+};
+void Kernel::controller_thread(int cpu_cores)
+{
+    // now we will Populate the New Queue
+    send_list_to_queue_new(qlist);
+    // display the queue
+    cout << "\n The data Currently into the New Queue \n";
+    cout << "\n-----------------------------------------\n";
+    queue<PCB> tmp_q = queue_new; // copy the original queue to the temporary queue
+
+    while (!tmp_q.empty())
+    {
+        // Just for Showing the Data into the Queue
+        string name = tmp_q.front().process_name;
+        float prorirty = tmp_q.front().priority;
+        float arri_time = tmp_q.front().arrival_time;
+        string pro_type = tmp_q.front().process_type;
+        float cpu_time = tmp_q.front().cpu_time;
+        float in_ou_time = tmp_q.front().input_output_time;
+        std::cout << name << "\t\t" << prorirty
+                  << "\t" << arri_time << "\t" << pro_type << "\t" << cpu_time << "\t" << in_ou_time << "\t"
+                  << "\n";
+        tmp_q.pop();
+    }
+
+    cout << "\n-----------------------------------------\n";
+}
+
 
 // function for printing the elements in a list
 void Kernel::showlist(list<PCB> g)
 {
     PCB test;
     list<PCB>::iterator it;
-     for (it = g.begin(); it != g.end(); ++it){
-         test = *it;
-         cout << test.process_name <<  "\n";
-         
-     }
-        cout <<"\t";
-        cout << "\n";
+    for (it = g.begin(); it != g.end(); ++it)
+    {
+        test = *it;
+
+        remove(test.process_name.begin(), test.process_name.end(), ' ');
+        remove(test.process_type.begin(), test.process_type.end(), ' ');
+        std::cout << "\n"
+                  << test.process_name << "\t" << test.priority
+                  << "\t" << test.arrival_time << "\t" << test.process_type << "\t" << test.cpu_time << "\t" << test.input_output_time << "\t";
+    }
+    cout << "\t";
+    cout << "\n";
 }
-  
+void Kernel::send_list_to_queue_new(list<PCB> g)
+{
+    PCB test;
+    list<PCB>::iterator it;
+    for (it = g.begin(); it != g.end(); ++it)
+    {
+        // Put the Linked list into the Queue
+        test = *it;
+        cout << test.input_output_time << "\t";
+        queue_new.push(test);
+    }
+}
+
 void Kernel::Implement_start(string file_name)
 {
     cout << "\n Reading the File of the Processes \n";
@@ -252,25 +305,24 @@ void Kernel::Implement_start(string file_name)
             if (i != 0)
             {
                 // here we need to send the data to the structure
-               // cout << tp << "\n";
+                // cout << tp << "\n";
                 // creaing a pcb for each process
-                //cout << "\n Counting " << count_pcb_entry << "\n";
-                
-                pcb_arr.assign_values_to_pcb_variable(tp,pcb_arr);
+                // cout << "\n Counting " << count_pcb_entry << "\n";
+
+                pcb_arr.assign_values_to_pcb_variable(tp, pcb_arr);
                 count_pcb_entry++;
             }
             i++;
         }
         newfile.close(); // close the file object.
         cout << "\n File has been Read Successfully\n";
-        // reading the PCB values for testing.
-      /*  for (int i = 0; i < count_pcb_entry; i++)
-        {
-            pcb_arr[i].display_pcb_values();
-        }*/
         showlist(qlist);
     }
 }
+
+
+
+//------------------------MAIN CODE--------------------------------//
 
 int main(int argc, char *argv[])
 {
@@ -291,21 +343,23 @@ int main(int argc, char *argv[])
         {
             // taking the Arguments
             if (i != 0)
-               // cout << argv[i] << "\n";
+                // cout << argv[i] << "\n";
 
-            // First Argument
-            if (i == 1)
-            {
-                // First Argumnet is going to be input file
-                spark_kernal.Implement_start(argv[i]);
-            }
+                // First Argument
+                if (i == 1)
+                {
+                    // First Argumnet is going to be input file
+                    spark_kernal.Implement_start(argv[i]);
+                }
             // Second Argument
             if (i == 2)
             {
                 if (stoi(argv[i]) == 1 || stoi(argv[i]) == 2 || stoi(argv[i]) == 4)
                 {
+                    spark_kernal.controller_thread(stoi(argv[i]));
                     cout << "\n CPU is running with " << argv[i] << " Threads\n";
-                    spark_kernal.start_scheduler_with_threads(stoi(argv[i]));
+                    spark_kernal.kernel_scheduler->start_scheduler_with_threads(stoi(argv[i]));
+                    //spark_kernal.start_scheduler_with_threads(stoi(argv[i]));
                 }
                 else
                 {
