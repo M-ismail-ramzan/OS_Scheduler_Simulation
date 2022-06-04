@@ -191,16 +191,20 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
         //     So,    1 + 1 = 2
         TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + 2;
         // drcreasing the i/o by one because it' going for input
-        pcb_obj.input_output_time--;
+        pcb_obj.input_output_time=(pcb_obj.input_output_time)-1;
         // just assuming it will go to i/o after 1 sec
-        pcb_obj.cpu_time--;
+         pcb_obj.cpu_time=(pcb_obj.cpu_time)-1;
         // send the Process to the waiting Queue
         // queue_waiting.push(pcb_obj);
+        queue_running.pop();
+        queue_running.push(pcb_obj);
         scheduler_ptr->send_running_queue_to_waiting_queue(pcb_obj);
     }
     else
     {
         TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
+        cout << "\n -----------COMPLETED EXECUTION -------------\n";
+        cout << pcb_obj.process_name  << "\n" << "---------------------";
     }
 }
 
@@ -209,6 +213,8 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
 void Scheduler::send_running_queue_to_waiting_queue(PCB obj)
 {
     // This function will send the running Queue to the waiting Queue
+    PCB debug = queue_running.front();
+    cout << "\n QUEUE Runnong " << debug.process_name << " " << debug.input_output_time << "   " << debug.cpu_time ;
     queue_waiting.push(queue_running.front());
     queue_running.pop();
 }
@@ -232,10 +238,10 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
 {
     while (1)
     {
+        // if waiting queue is not empty the do the following
         if (!queue_waiting.empty())
         {
-
-            Scheduler *ptr;
+            
             cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
             queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
@@ -427,7 +433,7 @@ void Kernel::Implement_start(string file_name)
     string process = "";
     // open the file
     fstream newfile;
-    newfile.open("processes.txt");
+    newfile.open(file_name);
     // now read information
     if (newfile.is_open())
     { // checking whether the file is open

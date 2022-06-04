@@ -1,0 +1,4 @@
+PROCNAME	PRIORITY	ARRIVAL-TIME	PROC-TYPE	CPU-TIME	IOTIME
+I-Chrome	    8	    0.0	 I	    10.0	    2
+I-Word	         7	    1.0	 I	    5.0	    1
+
