@@ -22,14 +22,38 @@ using namespace std;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
+// For the Input Arguments
 int CPU_CORES = 0;
 char ALGO = 'f';
+// Basic declearation to avoid ERROR'S
 struct PCB;
-class Scheduler;
+class Processer;
+class Scheduler
+{
+
+public:
+    Processer *my_cpu;
+    // these functions are just to Run the Threads for CPU
+    void start_scheduler_with_threads(pthread_t *);
+    static void *helper_fill_the_scheduler_queue(void *p);
+    void fill_the_scheduler_queue(int cpu_cores);
+    void send_new_queue_to_Ready_queue();
+    void send_running_queue_to_waiting_queue(PCB);
+    void send_waiting_queue_to_ready_queue();
+    static void *helper_send_waiting_queue_to_ready_queue(void *p);
+};
+// Following are the Main Queues that will be used in this process
 list<PCB> qlist;
 queue<PCB> queue_new;
 queue<PCB> queue_ready;
 queue<PCB> queue_running;
+queue<PCB> queue_waiting;
+queue<PCB> queue_terminated;
+// During the Execution we will be focusing on the Following Variables
+int TOTAL_EXECUTION_TIME = 0;
+int TOTAL_CONTEXT_SWICTING = 0;
+int TOTAL_TIME_READY_STATE = 0;
+
 struct PCB
 {
     // making the varibles for PCB
@@ -141,37 +165,81 @@ struct PCB
 };
 //-------------------------------END PCB-----------------------//
 
-
 //------------------------------START OF PROCESSER------------------//
-class Processer{
+class Processer
+{
 public:
-// A Process PCB values will be sent to the Algo and the Algo will then Execute 
-// the Process
-void Algo_First_come_First_server(PCB);
+    // A Process PCB values will be sent to the Algo and the Algo will then Execute
+    // the Process
+    void Algo_First_come_First_server(PCB, Scheduler *);
 };
 // Take Pcb object and Run the Process
-void Processer::Algo_First_come_First_server(PCB pcb_obj){
+void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_ptr)
+{
 
-    cout << "\n PROCESSER GOT \n";
-    cout << pcb_obj.process_name;
+    // Here we have to Perform the FCFS
+    cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
+
+    if (pcb_obj.input_output_time > 0)
+    {
+        // send the process to the Waiting Queue ///
+        TOTAL_CONTEXT_SWICTING++;
+        pcb_obj.input_output_time--;
+        pcb_obj.cpu_time--;
+        // send the Process to the waiting Queue
+        // queue_waiting.push(pcb_obj);
+        scheduler_ptr->send_running_queue_to_waiting_queue(pcb_obj);
+    }
 }
 
 //-----------------------Scheduler--------------------------------//
-class Scheduler
+
+void Scheduler::send_running_queue_to_waiting_queue(PCB obj)
 {
+    // This function will send the running Queue to the waiting Queue
+    queue_waiting.push(queue_running.front());
+    queue_running.pop();
+}
+void Scheduler::send_waiting_queue_to_ready_queue()
+{
+    // if waiting queue is empty then wait for something
+    //  this will be a thread working in it's own zone
 
-public:
-    Processer *my_cpu;
-    // these functions are just to Run the Threads for CPU
-    void start_scheduler_with_threads(pthread_t *);
-    static void *helper_fill_the_scheduler_queue(void *p);
-    void fill_the_scheduler_queue(int cpu_cores);
-    void send_new_queue_to_Ready_queue();
-};
+    // ceating a thread
+    pthread_t waiting_queue_thread_id;
+    if (pthread_create(&waiting_queue_thread_id, NULL, Scheduler::helper_send_waiting_queue_to_ready_queue, NULL) != 0)
+    {
+        perror("\n Kernel Threads are unable to create");
+        exit(0);
+    }
 
+    // cout << "**************************************************8";
+}
+
+void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
+{
+    while (1)
+    {
+        if (!queue_waiting.empty())
+        {
+            
+            Scheduler *ptr;
+            cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
+            queue_waiting.pop();
+            sleep(1);
+            
+        }
+        else
+        {
+            sleep(1);
+        }
+    }
+    return NULL;
+}
 void Scheduler::send_new_queue_to_Ready_queue()
 {
-
+    // first thing first start the working of backgrodun
+    send_waiting_queue_to_ready_queue();
     // This function will send the new Queue to Ready according to Arrival Time
     // cout << "\n" << queue_new.front().process_name;
 
@@ -218,16 +286,20 @@ void Scheduler::fill_the_scheduler_queue(int cpu_cores)
         sleep(1);
         // locked so one thread can write to the Queue at a time
         cout << "\nThread waiting: " << pthread_self() << "\n";
-        while (queue_ready.empty());
+        while (queue_ready.empty())
+            ;
         cout << " \nThread is Running : " << pthread_self() << "\n";
         // get the PCB and give it to the Processer
         PCB tmp_obj = queue_ready.front();
         queue_ready.pop();
-        if(ALGO == 'f'){
+        if (ALGO == 'f')
+        {
             cout << "Running the FCFS";
-            my_cpu->Algo_First_come_First_server(tmp_obj);
-            
-        }   
+            // GETTING TO THE RUNNING STATE
+            TOTAL_CONTEXT_SWICTING++;
+            queue_running.push(tmp_obj);
+            my_cpu->Algo_First_come_First_server(tmp_obj, this);
+        }
         // priority_queue<PCB> queue_new;
         // Now we have to push into the queue using the arriaval time
         // here we have to implement the Queue where the information will be transmitted
@@ -397,7 +469,9 @@ int main(int argc, char *argv[])
         {
             cout << "\n Invalid Aurgumnets \n";
             exit(1);
-        }else{
+        }
+        else
+        {
             // this is the Algo we are going to RUNnnn
             ALGO = *(argv[3]);
         }
