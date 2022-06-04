@@ -22,6 +22,7 @@ using namespace std;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
+int CPU_CORES = 0;
 struct PCB;
 class Scheduler;
 list<PCB> qlist;
@@ -139,40 +140,46 @@ struct PCB
 //-------------------------------END PCB-----------------------//
 
 //-----------------------Scheduler--------------------------------//
-class Scheduler{
+class Scheduler
+{
 
-    public:
+public:
     // these functions are just to Run the Threads for CPU
-    void start_scheduler_with_threads(int cpu_cores);
+    void start_scheduler_with_threads(pthread_t*);
     static void *helper_fill_the_scheduler_queue(void *p);
     void fill_the_scheduler_queue(int cpu_cores);
-  
-    
+    void send_new_queue_to_Ready_queue();
 };
 
-  void Scheduler::start_scheduler_with_threads(int cpu_cores)
+void Scheduler::send_new_queue_to_Ready_queue()
 {
-    // This is time to start the Threads...
 
-    pthread_t threads_id[cpu_cores];
-    // create the corese as specified by the user
-    for (int i = 0; i < cpu_cores; i++)
+    // This function will send the new Queue to Ready according to Arrival Time
+    // cout << "\n" << queue_new.front().process_name;
+
+    while (!queue_new.empty())
     {
-        void *ptr = &cpu_cores;
+        cout << "\n NOTE: CPU is running with " << CPU_CORES << " Threads\n";
+        cout << "\n--------READY QUEUE-----\n";
+        cout << "\n Process " << queue_new.front().process_name << " Arrived \n";
+        queue_ready.push(queue_new.front());
+        queue_new.pop();
+        // Now once we get the Process into the Ready Queue Now it's time to execute it....
+        cout << "\n-----------------------\n";
+        sleep(queue_new.front().arrival_time);
+    }
+}
+void Scheduler::start_scheduler_with_threads(pthread_t *threads_id)
+{
+  
+    // create the corese as specified by the user
+    for (int i = 0; i < CPU_CORES; i++)
+    {
+        void *ptr = &CPU_CORES;
         // creating the threads accoording to given time
         if (pthread_create(&threads_id[i], NULL, Scheduler::helper_fill_the_scheduler_queue, ptr) != 0)
         {
             perror("\n Kernel Threads are unable to create");
-            exit(0);
-        }
-    }
-
-    for (int i = 0; i < cpu_cores; i++)
-    {
-        // creating the threads accoording to given time
-        if (pthread_join(threads_id[i], NULL) != 0)
-        {
-            perror("\n Kernel Errror! in joining the Threads \n");
             exit(0);
         }
     }
@@ -187,21 +194,23 @@ void *Scheduler::helper_fill_the_scheduler_queue(void *p)
 }
 void Scheduler::fill_the_scheduler_queue(int cpu_cores)
 {
+    while(1){
+    pthread_mutex_lock(&mutex_locked_thread);
     sleep(1);
     // locked so one thread can write to the Queue at a time
-    pthread_mutex_lock(&mutex_locked_thread);
+    
+    cout << "\nThread waiting: " << pthread_self() << "\n";
+    while (queue_ready.empty());
     cout << " \nThread is Running : " << pthread_self() << "\n";
+    queue_ready.pop();
     // priority_queue<PCB> queue_new;
     // Now we have to push into the queue using the arriaval time
-
     // here we have to implement the Queue where the information will be transmitted
-    sleep(1);
     pthread_mutex_unlock(&mutex_locked_thread);
-
     // return NULL;
+    }
 }
 //-------------------------------End Scheduler-----------------------//
-
 
 class Kernel
 {
@@ -209,23 +218,23 @@ class Kernel
     PCB pcb_arr;
     int count_pcb_entry;
     // create the array of the threads id's
-  
-
+      // This is time to start the Threads...
+    
 public:
     Scheduler *kernel_scheduler;
     Kernel()
     {
         // pcb_arr = new PCB[NO_OF_PROCESSES];
         count_pcb_entry = 0;
-        kernel_scheduler=new Scheduler;
+        kernel_scheduler = new Scheduler;
     }
     void Implement_start(string file_name);
-    void controller_thread(int cpu_cores);
+    void controller_thread(int cpu_cores,pthread_t*);
     void start_scheduler_with_threads(int cpu_cores);
     void showlist(list<PCB> g);
     void send_list_to_queue_new(list<PCB>);
 };
-void Kernel::controller_thread(int cpu_cores)
+void Kernel::controller_thread(int cpu_cores, pthread_t *threads_id)
 {
     // now we will Populate the New Queue
     send_list_to_queue_new(qlist);
@@ -250,8 +259,25 @@ void Kernel::controller_thread(int cpu_cores)
     }
 
     cout << "\n-----------------------------------------\n";
-}
 
+    cout << "\n Controller Thread will Now Ask Scheduler (Short term) to Send the Processes to the Ready Queue According to their Arrival Time \n";
+    ;
+
+       // We can either have 4,2,1 CPU's Remember THAT!
+    kernel_scheduler->start_scheduler_with_threads(threads_id);
+    kernel_scheduler->send_new_queue_to_Ready_queue();
+
+    // After u are done working jOIN THE Threads...
+    for (int i = 0; i < CPU_CORES; i++)
+    {
+        // creating the threads accoording to given time
+        if (pthread_join(threads_id[i], NULL) != 0)
+        {
+            perror("\n Kernel Errror! in joining the Threads \n");
+            exit(0);
+        }
+    }
+}
 
 // function for printing the elements in a list
 void Kernel::showlist(list<PCB> g)
@@ -286,6 +312,8 @@ void Kernel::send_list_to_queue_new(list<PCB> g)
 
 void Kernel::Implement_start(string file_name)
 {
+ 
+
     cout << "\n Reading the File of the Processes \n";
     // Now I need to open that file and read all the information
     string process = "";
@@ -319,8 +347,6 @@ void Kernel::Implement_start(string file_name)
         showlist(qlist);
     }
 }
-
-
 
 //------------------------MAIN CODE--------------------------------//
 
@@ -356,10 +382,11 @@ int main(int argc, char *argv[])
             {
                 if (stoi(argv[i]) == 1 || stoi(argv[i]) == 2 || stoi(argv[i]) == 4)
                 {
-                    spark_kernal.controller_thread(stoi(argv[i]));
-                    cout << "\n CPU is running with " << argv[i] << " Threads\n";
-                    spark_kernal.kernel_scheduler->start_scheduler_with_threads(stoi(argv[i]));
-                    //spark_kernal.start_scheduler_with_threads(stoi(argv[i]));
+                    CPU_CORES = stoi(argv[i]);
+                    pthread_t threads_id[CPU_CORES];
+                    spark_kernal.controller_thread(stoi(argv[i]),threads_id);
+
+                    // spark_kernal.start_scheduler_with_threads(stoi(argv[i]));
                 }
                 else
                 {
