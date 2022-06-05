@@ -19,6 +19,8 @@
 #include <list>
 #include <iomanip>
 #include <semaphore.h>
+#include <sstream>
+#include <fcntl.h>
 //#include "os-kernel.h"
 using namespace std;
 // A PCB Struct to store the information if the processes
@@ -64,7 +66,7 @@ int TOTAL_TIME_READY_STATE = 0;
 int TIME_SLICE = 1;
 pthread_t kernel_print_output;
 priority_queue<PCB> queue_ready_proprity;
-
+char *OUTPUT_FILE_NAME;
 struct PCB
 {
     // making the varibles for PCB
@@ -186,8 +188,10 @@ void *helper_Print_Output(void *p)
     // SECOND COLUMN THE LENGTH OF QUEUE'S
     // THIRD COLUMN NAME OF PROCESS that each CPU is executing
     // FOURTH COLUMN SHOWS THE I/O QUEUE PROCESS NAME....
+    int cout_descriptor = dup(STDOUT_FILENO);
     while (1)
     {
+        dup2(cout_descriptor, STDOUT_FILENO);
         // if all the queues are empty it means program is terminated
 
         if ((queue_new.empty() && queue_ready.empty() && queue_waiting.empty() && queue_running.empty()))
@@ -205,6 +209,7 @@ void *helper_Print_Output(void *p)
         {
         case 1:
         {
+
             cout << "\n\n";
             cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
             cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(20) << "I/O"
@@ -224,11 +229,22 @@ void *helper_Print_Output(void *p)
             {
                 io_process_running = queue_waiting.front().process_name;
             }
+
+            // display on terminal
             cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(20) << io_process_running
                  << "\n";
-
-            // sleep(1);
             cout << "\n\n";
+            // Now change the Descriptor
+            // Open up a file
+            int file = open(OUTPUT_FILE_NAME, O_APPEND | O_WRONLY | O_CREAT, 0777);
+            if (file == -1)
+            {
+                cout << "\nERROR IN FILE OPENNIG\n";
+            }
+            dup2(file, STDOUT_FILENO);
+            // Save on the file
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(20) << io_process_running;
+            close(file);
             //  cout << "am not running duudeee";
             sleep(2);
             break;
@@ -258,6 +274,17 @@ void *helper_Print_Output(void *p)
             cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(10) << cpu_process_running << setw(20) << io_process_running
                  << "\n";
 
+            // Open up a file
+            int file = open(OUTPUT_FILE_NAME, O_APPEND | O_WRONLY | O_CREAT, 0777);
+            if (file == -1)
+            {
+                cout << "\nERROR IN FILE OPENNIG\n";
+            }
+            dup2(file, STDOUT_FILENO);
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(10) << cpu_process_running << setw(20) << io_process_running
+                 << "\n";
+            // Save on the file
+            close(file);
             // sleep(1);
             cout << "\n\n";
             //  cout << "am not running duudeee";
@@ -310,6 +337,16 @@ void *helper_Print_Output(void *p)
             cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running_1 << setw(10) << cpu_process_running_2 << setw(10) << cpu_process_running_3 << setw(10) << cpu_process_running_4 << setw(20) << io_process_running
                  << "\n";
 
+            // Open up a file
+            int file = open(OUTPUT_FILE_NAME, O_APPEND | O_WRONLY | O_CREAT, 0777);
+            if (file == -1)
+            {
+                cout << "\nERROR IN FILE OPENNIG\n";
+            }
+            dup2(file, STDOUT_FILENO);
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running_1 << setw(10) << cpu_process_running_2 << setw(10) << cpu_process_running_3 << setw(10) << cpu_process_running_4 << setw(20) << io_process_running
+                 << "\n";
+            close(file);
             // sleep(1);
             cout << "\n\n";
             //  cout << "am not running duudeee";
@@ -495,6 +532,7 @@ void Scheduler::terminate_the_process_to_terminated_queue(PCB pcb_obj)
 }
 void Scheduler::send_running_queue_to_waiting_queue(PCB obj)
 {
+    TOTAL_CONTEXT_SWICTING++;
     // This function will send the running Queue to the waiting Queue
     PCB debug = queue_running.front();
     cout << "\n QUEUE Running " << debug.process_name << " " << debug.input_output_time << "   " << debug.cpu_time;
@@ -507,7 +545,7 @@ void Scheduler::send_waiting_queue_to_ready_queue()
 {
     // if waiting queue is empty then wait for something
     //  this will be a thread working in it's own zone
-
+    TOTAL_TIME_READY_STATE++;
     // ceating a thread
     pthread_t waiting_queue_thread_id;
     if (pthread_create(&waiting_queue_thread_id, NULL, Scheduler::helper_send_waiting_queue_to_ready_queue, NULL) != 0)
@@ -529,6 +567,7 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
 
             // cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
             pthread_mutex_lock(&mutex_locked_thread1);
+            TOTAL_CONTEXT_SWICTING++;
             queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
             pthread_mutex_unlock(&mutex_locked_thread1);
@@ -842,11 +881,13 @@ int main(int argc, char *argv[])
             {
                 ALGO = *argv[3];
                 TIME_SLICE = stoi(argv[4]);
+                OUTPUT_FILE_NAME = argv[5];
             }
             else
             {
                 // this is the Algo we are going to RUNnnn
                 ALGO = *(argv[3]);
+                OUTPUT_FILE_NAME = argv[4];
             }
         }
         // reading the arguments

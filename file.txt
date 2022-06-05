@@ -1,0 +1,40 @@
+         1         0         1         0      NULL                NULL
+ NOTE: CPU is running with 1 Threads
+
+--------READY QUEUE-----
+
+ Process I-Word	 Arrived 
+
+ QUEUE Running I-Chrome	 1   9
+-----------------------
+         2         0         1         1      NULL           I-Chrome	
+ NOTE: CPU is running with 1 Threads
+
+--------READY QUEUE-----
+
+ Process I-Terminal	 Arrived 
+
+ QUEUE Running I-Word	 0   4
+-----------------------
+         3         0         2         1      NULL             I-Word	
+         4         0         2         1      NULL           I-Chrome	
+ NOTE: CPU is running with 1 Threads
+
+--------READY QUEUE-----
+
+ Process C-TreeGen	 Arrived 
+
+-----------------------
+
+         5         0         3         1      NULL         I-Terminal	
+ -----------COMPLETED EXECUTION -------------
+I-Word	
+         6         0         3         0      NULL                NULL
+ NOTE: CPU is running with 1 Threads
+
+--------READY QUEUE-----
+
+ Process C-g++	 Arrived 
+
+-----------------------
+
