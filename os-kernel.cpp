@@ -181,33 +181,103 @@ void *helper_Print_Output(void *p)
         //  cout << "\n Inside the thread \n";
 
         //   cout << "I am causing Problems: " << pthread_self();
-
-        cout << "\n\n";
-        cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
-        cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(20) << "I/O"
-             << "\n";
-        static int time = 0;
-        time++;
-
-        string cpu_process_running = "NULL";
-        string io_process_running = "NULL";
-        // checking if qeue is empty or not
-        if (!queue_running.empty())
+        switch (CPU_CORES)
         {
-            cpu_process_running = queue_running.front().process_name;
-        }
-        // checking if the queue waiting is not empty
-        if (!queue_waiting.empty())
+        case 1:
         {
-            io_process_running = queue_waiting.front().process_name;
-        }
-        cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(20) << io_process_running
-             << "\n";
+            cout << "\n\n";
+            cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
+            cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(20) << "I/O"
+                 << "\n";
+            static int time = 0;
+            time++;
 
-        // sleep(1);
-        cout << "\n\n";
-        //  cout << "am not running duudeee";
-        sleep(2);
+            string cpu_process_running = "NULL";
+            string io_process_running = "NULL";
+            // checking if qeue is empty or not
+            if (!queue_running.empty())
+            {
+                cpu_process_running = queue_running.front().process_name;
+            }
+            // checking if the queue waiting is not empty
+            if (!queue_waiting.empty())
+            {
+                io_process_running = queue_waiting.front().process_name;
+            }
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(20) << io_process_running
+                 << "\n";
+
+            // sleep(1);
+            cout << "\n\n";
+            //  cout << "am not running duudeee";
+            sleep(2);
+            break;
+        }
+        case 2:
+        {
+
+            cout << "\n\n";
+            cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
+            cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU 1" << setw(10) << "CPU 2" << setw(20) << "I/O"
+                 << "\n";
+            static int time = 0;
+            time++;
+
+            string cpu_process_running = "NULL";
+            string io_process_running = "NULL";
+            // checking if qeue is empty or not
+            if (!queue_running.empty())
+            {
+                cpu_process_running = queue_running.front().process_name;
+            }
+            // checking if the queue waiting is not empty
+            if (!queue_waiting.empty())
+            {
+                io_process_running = queue_waiting.front().process_name;
+            }
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(10) << cpu_process_running << setw(20) << io_process_running
+                 << "\n";
+
+            // sleep(1);
+            cout << "\n\n";
+            //  cout << "am not running duudeee";
+            sleep(2);
+            break;
+        }
+        case 4:
+        {
+            cout << "\n\n";
+            cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
+            cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU 1" << setw(10) << "CPU 2" << setw(10) << "CPU 3" << setw(10) << "CPU 4" << setw(20) << "I/O"
+                 << "\n";
+            static int time = 0;
+            time++;
+
+            string cpu_process_running = "NULL";
+            string io_process_running = "NULL";
+            // checking if qeue is empty or not
+            if (!queue_running.empty())
+            {
+                cpu_process_running = queue_running.front().process_name;
+            }
+            // checking if the queue waiting is not empty
+            if (!queue_waiting.empty())
+            {
+                io_process_running = queue_waiting.front().process_name;
+            }
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(10) << cpu_process_running << setw(10) << "CPU 3" << setw(10) << "CPU 4" << setw(20) << io_process_running
+                 << "\n";
+
+            // sleep(1);
+            cout << "\n\n";
+            //  cout << "am not running duudeee";
+            sleep(2);
+            break;
+        }
+
+        default:
+            break;
+        }
     }
     return NULL;
 }
@@ -225,7 +295,7 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
 {
 
     // Here we have to Perform the FCFS
-    cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
+  //  cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
 
     // Here i will be counting the Total Execution time
 
@@ -244,6 +314,7 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
         // send the Process to the waiting Queue
         // queue_waiting.push(pcb_obj);
         pthread_mutex_lock((&mutex_locked_thread1));
+        sleep(1);
         queue_running.pop();
         queue_running.push(pcb_obj);
         pthread_mutex_unlock((&mutex_locked_thread1));
@@ -259,8 +330,12 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
 void Scheduler::terminate_the_process_to_terminated_queue(PCB pcb_obj)
 {
     // get the process executed to the Terminated queue
+
+    sleep(1);
+    pthread_mutex_lock((&mutex_locked_thread1));
     queue_terminated.push(queue_running.front());
     queue_running.pop();
+     pthread_mutex_unlock((&mutex_locked_thread1));
     // Now once it's terminated show and GOOOO
     TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
     cout << "\n -----------COMPLETED EXECUTION -------------\n";
@@ -301,7 +376,7 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
         if (!queue_waiting.empty())
         {
 
-            cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
+           // cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
             pthread_mutex_lock(&mutex_locked_thread1);
             queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
@@ -383,16 +458,16 @@ void Scheduler::fill_the_scheduler_queue(int cpu_cores)
         pthread_mutex_lock(&mutex_locked_thread);
         sleep(1);
         // locked so one thread can write to the Queue at a time
-        cout << "\nThread waiting: " << pthread_self() << "\n";
+    //    cout << "\nThread waiting: " << pthread_self() << "\n";
         while (queue_ready.empty())
             ;
-        cout << " \nThread is Running : " << pthread_self() << "\n";
+     //   cout << " \nThread is Running : " << pthread_self() << "\n";
         // get the PCB and give it to the Processer
         PCB tmp_obj = queue_ready.front();
         queue_ready.pop();
         if (ALGO == 'f')
         {
-            cout << "Running the FCFS";
+         //   cout << "Running the FCFS";
             // GETTING TO THE RUNNING STATE
             TOTAL_CONTEXT_SWICTING++;
             queue_running.push(tmp_obj);
@@ -565,9 +640,9 @@ int main(int argc, char *argv[])
     }
     else
     {
-        cout << argv[3];
+        //  cout << argv[3];
         // checking some argument..
-
+        CPU_CORES = stoi(argv[2]);
         if (!(*(argv[3]) == 'f' || *(argv[3]) == 'p' || *(argv[3]) == 'r'))
         {
             cout << "\n Invalid Aurgumnets \n";
