@@ -17,6 +17,7 @@
 #include <sstream>
 #include <mutex>
 #include <list>
+#include <iomanip>
 //#include "os-kernel.h"
 using namespace std;
 // A PCB Struct to store the information if the processes
@@ -42,6 +43,7 @@ public:
     void send_running_queue_to_waiting_queue(PCB);
     void send_waiting_queue_to_ready_queue();
     static void *helper_send_waiting_queue_to_ready_queue(void *p);
+    void terminate_the_process_to_terminated_queue(PCB obj);
 };
 // Following are the Main Queues that will be used in this process
 list<PCB> qlist;
@@ -54,6 +56,8 @@ queue<PCB> queue_terminated;
 int TOTAL_EXECUTION_TIME = 0;
 int TOTAL_CONTEXT_SWICTING = 0;
 int TOTAL_TIME_READY_STATE = 0;
+
+pthread_t kernel_print_output;
 
 struct PCB
 {
@@ -165,6 +169,29 @@ struct PCB
     }
 };
 //-------------------------------END PCB-----------------------//
+void *helper_Print_Output(void *p)
+{
+    // This function will also Run the Background and will Display the Output...
+    // FIRST COLUMN WILL PRINT THE TIME
+    // SECOND COLUMN THE LENGTH OF QUEUE'S
+    // THIRD COLUMN NAME OF PROCESS that each CPU is executing
+    // FOURTH COLUMN SHOWS THE I/O QUEUE PROCESS NAME....
+    while (1)
+    {
+        //  cout << "\n Inside the thread \n";
+
+        //   cout << "I am causing Problems: " << pthread_self();
+
+        cout << "\n\n";
+        cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
+        cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(10) << "I/O";
+        // sleep(1);
+        cout << "\n\n";
+        //  cout << "am not running duudeee";
+        sleep(2);
+    }
+    return NULL;
+}
 
 //------------------------------START OF PROCESSER------------------//
 class Processer
@@ -192,9 +219,9 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
         //     So,    1 + 1 = 2
         TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + 2;
         // drcreasing the i/o by one because it' going for input
-        pcb_obj.input_output_time=(pcb_obj.input_output_time)-1;
+        pcb_obj.input_output_time = (pcb_obj.input_output_time) - 1;
         // just assuming it will go to i/o after 1 sec
-         pcb_obj.cpu_time=(pcb_obj.cpu_time)-1;
+        pcb_obj.cpu_time = (pcb_obj.cpu_time) - 1;
         // send the Process to the waiting Queue
         // queue_waiting.push(pcb_obj);
         pthread_mutex_lock((&mutex_locked_thread1));
@@ -205,20 +232,27 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
     }
     else
     {
-        queue_running.pop();
-        TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
-        cout << "\n -----------COMPLETED EXECUTION -------------\n";
-        cout << pcb_obj.process_name  << "\n" << "-----------------------------------";
+        scheduler_ptr->terminate_the_process_to_terminated_queue(pcb_obj);
     }
 }
 
 //-----------------------Scheduler--------------------------------//
-
+void Scheduler::terminate_the_process_to_terminated_queue(PCB pcb_obj)
+{
+    // get the process executed to the Terminated queue
+    queue_terminated.push(queue_running.front());
+    queue_running.pop();
+    // Now once it's terminated show and GOOOO
+    TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
+    cout << "\n -----------COMPLETED EXECUTION -------------\n";
+    cout << pcb_obj.process_name << "\n"
+         << "-----------------------------------";
+}
 void Scheduler::send_running_queue_to_waiting_queue(PCB obj)
 {
     // This function will send the running Queue to the waiting Queue
     PCB debug = queue_running.front();
-    cout << "\n QUEUE Running " << debug.process_name << " " << debug.input_output_time << "   " << debug.cpu_time ;
+    cout << "\n QUEUE Running " << debug.process_name << " " << debug.input_output_time << "   " << debug.cpu_time;
     pthread_mutex_lock((&mutex_locked_thread1));
     queue_waiting.push(queue_running.front());
     queue_running.pop();
@@ -247,10 +281,12 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
         // if waiting queue is not empty the do the following
         if (!queue_waiting.empty())
         {
-            
+
             cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
+            pthread_mutex_lock(&mutex_locked_thread1);
             queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
+            pthread_mutex_unlock(&mutex_locked_thread1);
             sleep(1);
         }
         else
@@ -264,21 +300,39 @@ void Scheduler::send_new_queue_to_Ready_queue()
 {
     // first thing first start the working of backgrodun
     send_waiting_queue_to_ready_queue();
-    // This function will send the new Queue to Ready according to Arrival Time
-    // cout << "\n" << queue_new.front().process_name;
+    // this->Print_Output();
+    //  This function will send the new Queue to Ready according to Arrival Time
+    //  cout << "\n" << queue_new.front().process_name;
 
     while (!queue_new.empty())
     {
         cout << "\n NOTE: CPU is running with " << CPU_CORES << " Threads\n";
         cout << "\n--------READY QUEUE-----\n";
         cout << "\n Process " << queue_new.front().process_name << " Arrived \n";
+        pthread_mutex_lock(&mutex_locked_thread1);
         queue_ready.push(queue_new.front());
         queue_new.pop();
+        pthread_mutex_unlock(&mutex_locked_thread1);
         // Now once we get the Process into the Ready Queue Now it's time to execute it....
         cout << "\n-----------------------\n";
         sleep(queue_new.front().arrival_time);
     }
 }
+void Print_Output()
+{
+    // Shows the Output on the TERMINAL Every Few Seconds..
+    //  this will be a thread working in it's own zone
+
+    if (pthread_create(&kernel_print_output, NULL, helper_Print_Output, NULL) != 0)
+    {
+        perror("\n Kernel Threads are unable to create \n");
+        exit(0);
+    }
+    pthread_detach(kernel_print_output);
+
+    cout << "\n After THREAD CREATION \n";
+}
+
 void Scheduler::start_scheduler_with_threads(pthread_t *threads_id)
 {
 
@@ -293,6 +347,7 @@ void Scheduler::start_scheduler_with_threads(pthread_t *threads_id)
             exit(0);
         }
     }
+    Print_Output();
 }
 
 void *Scheduler::helper_fill_the_scheduler_queue(void *p)
@@ -338,6 +393,7 @@ class Kernel
     // a pointer that can access the PCB anytime
     PCB pcb_arr;
     int count_pcb_entry;
+    // ceating a thread
     // create the array of the threads id's
     // This is time to start the Threads...
 
@@ -354,7 +410,10 @@ public:
     void start_scheduler_with_threads(int cpu_cores);
     void showlist(list<PCB> g);
     void send_list_to_queue_new(list<PCB>);
+    // void Print_Output();
+    // static void *helper_Print_Output(void *p);
 };
+
 void Kernel::controller_thread(int cpu_cores, pthread_t *threads_id)
 {
     // now we will Populate the New Queue
@@ -384,8 +443,8 @@ void Kernel::controller_thread(int cpu_cores, pthread_t *threads_id)
     cout << "\n Controller Thread will Now Ask Scheduler (Short term) to Send the Processes to the Ready Queue According to their Arrival Time \n";
     ;
 
-    // We can either have 4,2,1 CPU's Remember THAT!
     kernel_scheduler->start_scheduler_with_threads(threads_id);
+
     kernel_scheduler->send_new_queue_to_Ready_queue();
 
     // After u are done working jOIN THE Threads...
@@ -408,7 +467,7 @@ void Kernel::showlist(list<PCB> g)
     for (it = g.begin(); it != g.end(); ++it)
     {
         test = *it;
-
+        // just removing the Extra Spaces nothing fancy in here
         remove(test.process_name.begin(), test.process_name.end(), ' ');
         remove(test.process_type.begin(), test.process_type.end(), ' ');
         std::cout << "\n"
@@ -420,6 +479,7 @@ void Kernel::showlist(list<PCB> g)
 }
 void Kernel::send_list_to_queue_new(list<PCB> g)
 {
+
     PCB test;
     list<PCB>::iterator it;
     for (it = g.begin(); it != g.end(); ++it)
@@ -519,6 +579,7 @@ int main(int argc, char *argv[])
                 {
 
                     CPU_CORES = stoi(argv[i]);
+                    // Print_Output();
                     pthread_t threads_id[CPU_CORES];
                     spark_kernal.controller_thread(stoi(argv[i]), threads_id);
 
@@ -536,5 +597,6 @@ int main(int argc, char *argv[])
             }
         }
     }
+    pthread_exit(0);
     return 0;
 }
