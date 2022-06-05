@@ -48,6 +48,7 @@ public:
     void send_waiting_queue_to_ready_queue();
     static void *helper_send_waiting_queue_to_ready_queue(void *p);
     void terminate_the_process_to_terminated_queue(PCB obj);
+    void send_running_queue_to_ready_queue(PCB obj);
 };
 // Following are the Main Queues that will be used in this process
 list<PCB> qlist;
@@ -60,7 +61,7 @@ queue<PCB> queue_terminated;
 int TOTAL_EXECUTION_TIME = 0;
 int TOTAL_CONTEXT_SWICTING = 0;
 int TOTAL_TIME_READY_STATE = 0;
-
+int TIME_SLICE = 0;
 pthread_t kernel_print_output;
 
 struct PCB
@@ -182,6 +183,16 @@ void *helper_Print_Output(void *p)
     // FOURTH COLUMN SHOWS THE I/O QUEUE PROCESS NAME....
     while (1)
     {
+        // if all the queues are empty it means program is terminated
+
+        if ((queue_new.empty() && queue_ready.empty() && queue_waiting.empty() && queue_running.empty()))
+        {
+            cout << "\nTOTAL CONTEXT SWITCHING : " << TOTAL_CONTEXT_SWICTING << endl;
+            cout << "\nTOTAL EXECUTION TIME : " << TOTAL_EXECUTION_TIME << endl;
+            cout << "\nTOTAL READY STATE : " << TOTAL_TIME_READY_STATE << endl;
+            exit(0);
+        }
+
         //  cout << "\n Inside the thread \n";
 
         //   cout << "I am causing Problems: " << pthread_self();
@@ -315,7 +326,56 @@ public:
     // A Process PCB values will be sent to the Algo and the Algo will then Execute
     // the Process
     void Algo_First_come_First_server(PCB, Scheduler *);
+    void Algo_Round_Robin(PCB, Scheduler *);
 };
+void Processer::Algo_Round_Robin(PCB pcb_obj, Scheduler *scheduler_ptr)
+{
+
+    // Here we have to PERFORM ROUND ROBIN YAYAYA
+    cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
+
+    if (pcb_obj.input_output_time > 0)
+    {
+        // send the process to the Waiting Queue ///
+        TOTAL_CONTEXT_SWICTING++;
+        // adding 2 cuz
+        // -- CPU TIME + I/O time (Assume 1 sec)
+        //     So,    1 + 1 = 2
+        TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + 2;
+        // drcreasing the i/o by one because it' going for input
+        pcb_obj.input_output_time = (pcb_obj.input_output_time) - 1;
+        // just assuming it will go to i/o after 1 sec
+        pcb_obj.cpu_time = (pcb_obj.cpu_time) - 1;
+        // send the Process to the waiting Queue
+        // queue_waiting.push(pcb_obj);
+        pthread_mutex_lock((&mutex_locked_thread1));
+        sleep(1);
+        queue_running.pop();
+        queue_running.push(pcb_obj);
+        pthread_mutex_unlock((&mutex_locked_thread1));
+        scheduler_ptr->send_running_queue_to_waiting_queue(pcb_obj);
+    }
+    // if the cpu time is greater than the time slice
+    else if (pcb_obj.cpu_time > TIME_SLICE)
+    {
+        // then Run the Process for particular time slice and Send back to the Ready Queue
+        // Here we have to execute the Process for the Given Time Slice..
+        pcb_obj.cpu_time = pcb_obj.cpu_time - TIME_SLICE;
+        pthread_mutex_lock((&mutex_locked_thread1));
+        sleep(1);
+        queue_running.pop();
+        queue_running.push(pcb_obj);
+        pthread_mutex_unlock((&mutex_locked_thread1));
+
+        // now send this process to the Ready Queue again :)
+        scheduler_ptr->send_running_queue_to_ready_queue(pcb_obj);
+    }
+    else
+    {
+        // it means that the Process will be executed in the time slice so terminate it lol
+        scheduler_ptr->terminate_the_process_to_terminated_queue(pcb_obj);
+    }
+}
 // Take Pcb object and Run the Process
 void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_ptr)
 {
@@ -353,6 +413,17 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
 }
 
 //-----------------------Scheduler--------------------------------//
+
+void Scheduler::send_running_queue_to_ready_queue(PCB pcb_obj)
+{
+    // Here the Thread will send the Running Process to the
+    pthread_mutex_lock(&mutex_locked_thread1);
+    // Now we have to Push to ready and remove from running with new time slices
+    TOTAL_CONTEXT_SWICTING++;
+    queue_ready.push(queue_running.front());
+    queue_running.pop();
+    pthread_mutex_unlock(&mutex_locked_thread1);
+}
 void Scheduler::terminate_the_process_to_terminated_queue(PCB pcb_obj)
 {
     // get the process executed to the Terminated queue
@@ -499,6 +570,13 @@ void Scheduler::fill_the_scheduler_queue(int cpu_cores)
             TOTAL_CONTEXT_SWICTING++;
             queue_running.push(tmp_obj);
             my_cpu->Algo_First_come_First_server(tmp_obj, this);
+        }
+        else if (ALGO == 'r')
+        {
+            TOTAL_CONTEXT_SWICTING++;
+            // Alright We got the Process in the ready Queue. Now we will send it to the Running Queue
+            queue_running.push(tmp_obj);
+            my_cpu->Algo_Round_Robin(tmp_obj, this);
         }
         // priority_queue<PCB> queue_new;
         // Now we have to push into the queue using the arriaval time
@@ -658,7 +736,7 @@ int main(int argc, char *argv[])
     Kernel spark_kernal;
     cout << "\n Checking for Argumnets \n";
     // checking for the erros at the arguments
-    if (argc < 5)
+    if (argc < 5 || argc > 6)
     {
         cout << "\n Please Use the Following Format \n";
         cout << "\nos-kernel <Input file> <# CPUs> r <timeslice> <Output file>\n";
@@ -670,6 +748,7 @@ int main(int argc, char *argv[])
         //  cout << argv[3];
         // checking some argument..
         CPU_CORES = stoi(argv[2]);
+        ALGO = *argv[3];
         sem_init(&samphore_multithreading, 0, CPU_CORES);
         if (!(*(argv[3]) == 'f' || *(argv[3]) == 'p' || *(argv[3]) == 'r'))
         {
@@ -678,8 +757,16 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // this is the Algo we are going to RUNnnn
-            ALGO = *(argv[3]);
+            if (*argv[3] == 'r')
+            {
+                ALGO = *argv[3];
+                TIME_SLICE = stoi(argv[4]);
+            }
+            else
+            {
+                // this is the Algo we are going to RUNnnn
+                ALGO = *(argv[3]);
+            }
         }
         // reading the arguments
         for (int i = 0; i < argc; ++i)
