@@ -18,12 +18,16 @@
 #include <mutex>
 #include <list>
 #include <iomanip>
+#include <semaphore.h>
 //#include "os-kernel.h"
 using namespace std;
 // A PCB Struct to store the information if the processes
 //#include "os-kernel.cpp"
 pthread_mutex_t mutex_locked_thread;
 pthread_mutex_t mutex_locked_thread1;
+// using samphore for multithreading
+sem_t samphore_multithreading;
+
 // For the Input Arguments
 int CPU_CORES = 0;
 char ALGO = 'f';
@@ -253,19 +257,41 @@ void *helper_Print_Output(void *p)
             static int time = 0;
             time++;
 
-            string cpu_process_running = "NULL";
+            string cpu_process_running_1 = "NULL";
+            string cpu_process_running_2 = "NULL";
+            string cpu_process_running_3 = "NULL";
+            string cpu_process_running_4 = "NULL";
             string io_process_running = "NULL";
             // checking if qeue is empty or not
             if (!queue_running.empty())
             {
-                cpu_process_running = queue_running.front().process_name;
+                queue<PCB> temp;
+                temp = queue_running;
+
+                cpu_process_running_1 = temp.front().process_name;
+                temp.pop();
+                if (!temp.empty())
+                {
+                    cpu_process_running_2 = temp.front().process_name;
+                    temp.pop();
+                }
+                if (!temp.empty())
+                {
+                    cpu_process_running_3 = temp.front().process_name;
+                    temp.pop();
+                }
+                if (!temp.empty())
+                {
+                    cpu_process_running_4 = temp.front().process_name;
+                    temp.pop();
+                }
             }
             // checking if the queue waiting is not empty
             if (!queue_waiting.empty())
             {
                 io_process_running = queue_waiting.front().process_name;
             }
-            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(10) << cpu_process_running << setw(10) << "CPU 3" << setw(10) << "CPU 4" << setw(20) << io_process_running
+            cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running_1 << setw(10) << cpu_process_running_2 << setw(10) << cpu_process_running_3 << setw(10) << cpu_process_running_4 << setw(20) << io_process_running
                  << "\n";
 
             // sleep(1);
@@ -295,7 +321,7 @@ void Processer::Algo_First_come_First_server(PCB pcb_obj, Scheduler *scheduler_p
 {
 
     // Here we have to Perform the FCFS
-  //  cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
+    //  cout << "\n Process " << pcb_obj.process_name << " has To be Executed in " << pcb_obj.cpu_time << " with " << pcb_obj.input_output_time << " I/O";
 
     // Here i will be counting the Total Execution time
 
@@ -335,7 +361,7 @@ void Scheduler::terminate_the_process_to_terminated_queue(PCB pcb_obj)
     pthread_mutex_lock((&mutex_locked_thread1));
     queue_terminated.push(queue_running.front());
     queue_running.pop();
-     pthread_mutex_unlock((&mutex_locked_thread1));
+    pthread_mutex_unlock((&mutex_locked_thread1));
     // Now once it's terminated show and GOOOO
     TOTAL_EXECUTION_TIME = TOTAL_EXECUTION_TIME + pcb_obj.cpu_time;
     cout << "\n -----------COMPLETED EXECUTION -------------\n";
@@ -376,7 +402,7 @@ void *Scheduler::helper_send_waiting_queue_to_ready_queue(void *p)
         if (!queue_waiting.empty())
         {
 
-           // cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
+            // cout << "\n RUNNING IN THE BACKGROUND FOR NO REASON";
             pthread_mutex_lock(&mutex_locked_thread1);
             queue_ready.push(queue_waiting.front());
             queue_waiting.pop();
@@ -456,18 +482,19 @@ void Scheduler::fill_the_scheduler_queue(int cpu_cores)
     while (1)
     {
         pthread_mutex_lock(&mutex_locked_thread);
+        // sem_wait(&samphore_multithreading);
         sleep(1);
         // locked so one thread can write to the Queue at a time
-    //    cout << "\nThread waiting: " << pthread_self() << "\n";
+        //    cout << "\nThread waiting: " << pthread_self() << "\n";
         while (queue_ready.empty())
             ;
-     //   cout << " \nThread is Running : " << pthread_self() << "\n";
+        //   cout << " \nThread is Running : " << pthread_self() << "\n";
         // get the PCB and give it to the Processer
         PCB tmp_obj = queue_ready.front();
         queue_ready.pop();
         if (ALGO == 'f')
         {
-         //   cout << "Running the FCFS";
+            //   cout << "Running the FCFS";
             // GETTING TO THE RUNNING STATE
             TOTAL_CONTEXT_SWICTING++;
             queue_running.push(tmp_obj);
@@ -643,6 +670,7 @@ int main(int argc, char *argv[])
         //  cout << argv[3];
         // checking some argument..
         CPU_CORES = stoi(argv[2]);
+        sem_init(&samphore_multithreading, 0, CPU_CORES);
         if (!(*(argv[3]) == 'f' || *(argv[3]) == 'p' || *(argv[3]) == 'r'))
         {
             cout << "\n Invalid Aurgumnets \n";
@@ -691,6 +719,8 @@ int main(int argc, char *argv[])
             }
         }
     }
+
+    sem_destroy(&samphore_multithreading);
     pthread_exit(0);
     return 0;
 }
