@@ -184,7 +184,26 @@ void *helper_Print_Output(void *p)
 
         cout << "\n\n";
         cout << "\n -----------------------------ORIGINAL OUTPUT--------------------------\n";
-        cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(10) << "I/O";
+        cout << setw(10) << "Time" << setw(10) << "RU" << setw(10) << "RE" << setw(10) << "WA" << setw(10) << "CPU" << setw(20) << "I/O"
+             << "\n";
+        static int time = 0;
+        time++;
+
+        string cpu_process_running = "NULL";
+        string io_process_running = "NULL";
+        // checking if qeue is empty or not
+        if (!queue_running.empty())
+        {
+            cpu_process_running = queue_running.front().process_name;
+        }
+        // checking if the queue waiting is not empty
+        if (!queue_waiting.empty())
+        {
+            io_process_running = queue_waiting.front().process_name;
+        }
+        cout << setw(10) << time << setw(10) << queue_running.size() << setw(10) << queue_ready.size() << setw(10) << queue_waiting.size() << setw(10) << cpu_process_running << setw(20) << io_process_running
+             << "\n";
+
         // sleep(1);
         cout << "\n\n";
         //  cout << "am not running duudeee";
